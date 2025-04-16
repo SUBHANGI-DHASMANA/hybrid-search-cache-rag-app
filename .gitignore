@@ -1,0 +1,21 @@
+# ChromaDB directory
+chroma_db/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables
+.env
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# Streamlit
+.streamlit/
+
+# Temporary files
+*.tmp
