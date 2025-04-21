@@ -3,7 +3,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 import tempfile
 from dotenv import load_dotenv
 
-from chroma_store import create_ensemble_retriever, update_retriever_weights
+from chroma_store import create_ensemble_retriever
 
 load_dotenv()
 
@@ -12,7 +12,8 @@ def load_pdf(file_path):
     documents = loader.load()
     return documents
 
-def split_documents(documents, chunk_size=1000, chunk_overlap=100):
+def split_documents(documents, chunk_size=1500, chunk_overlap=150):
+    # Using larger chunk size and overlap for research papers to maintain context of complex academic content
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
@@ -27,7 +28,7 @@ def create_vector_store(texts):
     retriever = create_ensemble_retriever(texts)
     return retriever
 
-def load_existing_index(embeddings=None):
+def load_existing_index():
     try:
         retriever = create_ensemble_retriever()
         return retriever

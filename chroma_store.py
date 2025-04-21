@@ -2,9 +2,9 @@ from langchain_community.vectorstores import Chroma
 from langchain_community.retrievers import BM25Retriever
 from langchain.retrievers import EnsembleRetriever
 from langchain_ollama import OllamaEmbeddings
+from langchain.schema import Document
 import os
 import uuid
-import tempfile
 from dotenv import load_dotenv
 
 load_dotenv()
