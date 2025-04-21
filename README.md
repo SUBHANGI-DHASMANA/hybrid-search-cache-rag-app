@@ -161,8 +161,8 @@ Researchers and students face significant challenges when trying to quickly unde
 
 1. Clone this repository:
    ```
-   git clone https://github.com/yourusername/research-paper-qa-assistant.git
-   cd research-paper-qa-assistant
+   git clone https://github.com/SUBHANGI-DHASMANA/hybrid-search-cache-rag-app.git
+   cd hybrid-search-cache-rag-app
    ```
 
 2. Install the required packages:
