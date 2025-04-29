@@ -153,9 +153,9 @@ Researchers and students face significant challenges when trying to quickly unde
 - **Backend**: Python-based with LangChain for orchestration
 - **Frontend**: Streamlit for rapid development and iteration
 - **Retrieval**: ChromaDB for vector storage, BM25 for keyword search
-- **LLM Integration**: Compatible with various models via Ollama
+- **LLM Integration**: Hugging Face models (Mistral-7B-Instruct-v0.2 and sentence-transformers/all-MiniLM-L6-v2)
 - **Data Processing**: PyPDF and custom extractors for academic papers
-- **Deployment**: Containerized for easy deployment and scaling
+- **Deployment**: Containerized for easy deployment and scaling on Hugging Face Spaces
 
 ## Installation and Setup
 

@@ -1,7 +1,7 @@
 from langchain_community.vectorstores import Chroma
 from langchain_community.retrievers import BM25Retriever
 from langchain.retrievers import EnsembleRetriever
-from langchain_ollama import OllamaEmbeddings
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.schema import Document
 import os
 import uuid
@@ -12,7 +12,7 @@ load_dotenv()
 CHROMA_PERSIST_DIRECTORY = os.path.join(os.getcwd(), "chroma_db")
 
 def get_embeddings():
-    return OllamaEmbeddings(model="all-minilm")
+    return HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
 def create_ensemble_retriever(documents=None, persist_directory=CHROMA_PERSIST_DIRECTORY):
     os.makedirs(persist_directory, exist_ok=True)

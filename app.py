@@ -1,6 +1,6 @@
 import streamlit as st
-from langchain_ollama import OllamaEmbeddings
-from langchain_community.llms import Ollama
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEndpoint
 import os
 import time
 import shutil
@@ -60,9 +60,27 @@ with col1:
 # Initialize models
 @st.cache_resource
 def initialize_models():
-    llm = Ollama(model="mistral", temperature=0.2, num_ctx=2048)  # Lower temperature for more factual responses
-    embeddings = OllamaEmbeddings(model="all-minilm")
+    # Check for HF_TOKEN in environment variables
+    hf_token = os.getenv("HF_TOKEN")
+
+    # Initialize Hugging Face models
+    if hf_token:
+        # Use HuggingFaceEndpoint with API token for Llama model
+        llm = HuggingFaceEndpoint(
+            repo_id="meta-llama/Llama-3.2-3B-Instruct",
+            temperature=0.2,
+            max_length=2048,
+            model_kwargs={"max_new_tokens": 512},
+            huggingfacehub_api_token=hf_token
+        )
+    # Initialize sentence-transformers embeddings
+    # This should work without an API token
+    embeddings = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-MiniLM-L6-v2"
+    )
+
     return llm, embeddings
+
 
 llm, embeddings = initialize_models()
 
