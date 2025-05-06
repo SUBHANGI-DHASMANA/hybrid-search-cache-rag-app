@@ -1,37 +1,35 @@
 import streamlit as st
 from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_huggingface import HuggingFaceEndpoint
 import os
 import time
 import shutil
 from dotenv import load_dotenv
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 
 load_dotenv()
+
+os.makedirs("offload", exist_ok=True)
 
 from data_ingestion import process_uploaded_file, load_existing_index
 
 st.title("Research Paper Q&A Assistant")
+st.caption("Powered by Mistral 7B Instruct Research Paper model")
 
-# Initialize session state variables if they don't exist
 if 'response_cache' not in st.session_state:
     st.session_state.response_cache = {}
 
-# Track if an answer has been displayed
 if 'answer_displayed' not in st.session_state:
     st.session_state.answer_displayed = False
 
-# Store the last question for context
 if 'last_question' not in st.session_state:
     st.session_state.last_question = ""
 
-# Track if we're currently processing a question
 if 'processing' not in st.session_state:
     st.session_state.processing = False
 
-# Add buttons for clearing data
 col1, col2 = st.columns(2)
 
-# Button to clear ChromaDB data
 with col1:
     if st.button("Clear Research Paper Database"):
         chroma_dir = os.path.join(os.getcwd(), "chroma_db")
@@ -39,7 +37,6 @@ with col1:
             try:
                 shutil.rmtree(chroma_dir)
                 st.success("Research paper database cleared successfully!")
-                # Reset the retriever
                 retriever = None
             except Exception as e:
                 st.error(f"Error clearing ChromaDB data: {str(e)}")
@@ -49,7 +46,6 @@ with col1:
     if st.button("Clear Analysis Cache"):
         try:
             st.session_state.response_cache = {}
-            # Reset the Q&A session state
             st.session_state.answer_displayed = False
             st.session_state.last_question = ""
             st.success("Analysis cache cleared successfully!")
@@ -57,32 +53,102 @@ with col1:
             st.error(f"Error clearing cache: {str(e)}")
 
 
-# Initialize models
-@st.cache_resource
+@st.cache_resource(show_spinner=False)
 def initialize_models():
-    # Check for HF_TOKEN in environment variables
-    hf_token = os.getenv("HF_TOKEN")
+    model_id = "pratham0011/mistral_7b-instruct-research-paper"
 
-    # Initialize Hugging Face models
-    if hf_token:
-        # Use HuggingFaceEndpoint with API token for Llama model
-        llm = HuggingFaceEndpoint(
-            repo_id="meta-llama/Llama-3.2-3B-Instruct",
-            temperature=0.2,
-            max_length=2048,
-            model_kwargs={"max_new_tokens": 512},
-            huggingfacehub_api_token=hf_token
-        )
-    # Initialize sentence-transformers embeddings
-    # This should work without an API token
+    # Load tokenizer with optimized settings
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_id,
+        local_files_only=False,  # Allow downloading if not cached
+        use_fast=True           # Use faster tokenizer implementation
+    )
+
+    # Load model with enhanced memory optimizations
+    model = AutoModelForCausalLM.from_pretrained(
+        model_id,
+        torch_dtype=torch.float16,  # Use half precision
+        low_cpu_mem_usage=True,     # Optimize memory usage
+        offload_folder="offload",   # Offload to disk if needed
+        device_map="auto",          # Let the library decide the best device mapping
+        offload_state_dict=True,    # Offload state dict to CPU to save GPU memory
+        use_cache=True              # Enable KV cache for faster inference
+    )
+
+    # Create a text generation pipeline with optimized settings
+    llm_pipeline = pipeline(
+        "text-generation",
+        model=model,
+        tokenizer=tokenizer,
+        max_new_tokens=512,
+        do_sample=True,
+        temperature=0.7,
+        batch_size=1,               # Process one input at a time to reduce memory usage
+        return_full_text=False      # Only return the generated text, not the prompt
+    )
+
+    # Create a wrapper function with optimized handling
+    def mistral_llm(prompt):
+        try:
+            # Use a timeout to prevent hanging
+            output = llm_pipeline(prompt)
+
+            # Since we set return_full_text=False, we should get only the generated text
+            generated_text = output[0]["generated_text"]
+
+            # Clean up any remaining prompt text if needed
+            if prompt in generated_text:
+                response = generated_text[len(prompt):].strip()
+            else:
+                response = generated_text
+
+            return response
+        except Exception as e:
+            # Provide a fallback response if model generation fails
+            st.error(f"Model generation error: {str(e)}")
+            return f"I apologize, but I encountered an error while processing your request. Error details: {str(e)}"
+
     embeddings = HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2"
     )
 
-    return llm, embeddings
+    return mistral_llm, embeddings
 
+# Add a model loading state to prevent reloading
+if 'model_loaded' not in st.session_state:
+    st.session_state.model_loaded = False
 
-llm, embeddings = initialize_models()
+# Only load the model if it hasn't been loaded yet
+if not st.session_state.model_loaded:
+    with st.spinner("Loading Mistral 7B model... This may take a few minutes on first run."):
+        progress_placeholder = st.empty()
+        progress_bar = progress_placeholder.progress(0)
+
+        # Display staged loading messages for better user experience
+        loading_message = st.empty()
+        loading_message.info("Stage 1/3: Initializing model components...")
+        progress_bar.progress(10)
+
+        # Pre-download the model to disk cache if needed
+        loading_message.info("Stage 2/3: Loading model into memory (this may take a while)...")
+        progress_bar.progress(30)
+
+        # Load models
+        llm, embeddings = initialize_models()
+
+        # Update progress and message
+        loading_message.info("Stage 3/3: Finalizing model setup...")
+        progress_bar.progress(90)
+
+        # Mark as loaded in session state
+        st.session_state.model_loaded = True
+
+        # Final update
+        progress_bar.progress(100)
+        loading_message.success("✅ Model loaded successfully! Ready to analyze research papers.")
+else:
+    # If already loaded, just get the cached models
+    llm, embeddings = initialize_models()
 
 st.markdown("### Upload a research paper to analyze and ask questions about its content.")
 st.markdown("This tool helps you extract insights, understand methodologies, and explore findings from academic papers.")
@@ -117,8 +183,6 @@ if retriever is not None:
     vector_weight = 0.5
     from chroma_store import update_retriever_weights
     retriever = update_retriever_weights(retriever, bm25_weight, vector_weight)
-    # Always show the Research Paper Analysis header
-    st.markdown("### Research Paper Analysis")
 
     # Create columns for the question input and Ask button
     question_col, button_col = st.columns([4, 1])
@@ -193,8 +257,8 @@ Format your answer in a clear, academic style with proper citations to sections 
 
 Answer:"""
 
-                # Generate answer
-                answer = llm.invoke(prompt)
+                # Generate answer using our Mistral model
+                answer = llm(prompt)
 
                 # Cache the response
                 st.session_state.response_cache[cache_key] = {

@@ -175,6 +175,31 @@ Researchers and students face significant challenges when trying to quickly unde
    streamlit run app.py
    ```
 
+## Memory Optimization Options
+
+The application includes several options to optimize performance and memory usage:
+
+### Model Size Options
+
+- **Standard**: Uses the full `pratham0011/mistral_7b-instruct-research-paper` model for best quality responses
+- **Small**: Uses the `mistralai/Mistral-7B-Instruct-v0.2` model which loads faster
+- **Tiny**: Uses the `TinyLlama/TinyLlama-1.1B-Chat-v1.0` model for environments with very limited memory
+
+### CPU Mode
+
+If you encounter memory errors (especially on Mac with MPS), enable the "Force CPU mode" option. This will:
+- Disable GPU acceleration
+- Prevent "MPS out of memory" errors
+- Allow the application to run on systems with limited GPU memory
+
+### Automatic Fallbacks
+
+The application includes automatic fallbacks if a model fails to load:
+1. First tries the selected model with optimizations
+2. Falls back to standard loading if optimization libraries aren't available
+3. Tries the smaller model if the main model fails
+4. Finally attempts the tiny model as a last resort
+
 ## Future Considerations
 
 - Integration with academic search engines and databases

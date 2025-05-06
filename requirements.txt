@@ -9,3 +9,7 @@ python-dotenv
 chromadb
 faiss-cpu
 scikit-learn
+torch>=2.0.0
+safetensors
+protobuf
+huggingface-hub>=0.19.0
