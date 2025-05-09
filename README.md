@@ -8,6 +8,27 @@ https://github.com/user-attachments/assets/d07e9730-c22a-43a5-9757-c0a5097e8018
 
 The Research Paper Q&A Assistant is an AI-powered application designed to help researchers, students, and academics efficiently extract insights from scientific papers. By leveraging advanced natural language processing and retrieval techniques, the application enables users to ask questions about research papers and receive accurate, contextually relevant answers without having to read the entire document.
 
+## How to run using docker?
+
+S1: Pull image
+```
+docker pull subhangidhasmana/research-paper-qa:latest
+```
+
+S2: Create folders
+```
+mkdir -p ~/research-paper-qa/chroma_db
+mkdir -p ~/research-paper-qa/offload
+```
+
+S3: Run app
+```
+docker run -p 8501:8501 \
+  -v ~/research-paper-qa/chroma_db:/app/chroma_db \
+  -v ~/research-paper-qa/offload:/app/offload \
+  subhangidhasmana/research-paper-qa:latest
+```
+
 ## Problem Statement
 
 Researchers and students face significant challenges when trying to quickly understand and extract information from academic papers:
