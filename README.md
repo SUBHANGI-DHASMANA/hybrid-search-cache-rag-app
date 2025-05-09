@@ -59,9 +59,9 @@ Researchers and students face significant challenges when trying to quickly unde
 - **Backend**: Python-based with LangChain for orchestration
 - **Frontend**: Streamlit for rapid development and iteration
 - **Retrieval**: ChromaDB for vector storage, BM25 for keyword search
-- **LLM Integration**: Hugging Face models (Mistral-7B-Instruct-v0.2 and sentence-transformers/all-MiniLM-L6-v2)
+- **LLM Integration**: Hugging Face models (Mistral fine tuned mode: mistral_7b-instruct-research-paper and sentence-transformers/all-MiniLM-L6-v2)
 - **Data Processing**: PyPDF and custom extractors for academic papers
-- **Deployment**: Containerized for easy deployment and scaling on Hugging Face Spaces
+- **Deployment**: Containerized for easy deployment using docker
 
 ## Installation and Setup
 
@@ -86,36 +86,3 @@ Researchers and students face significant challenges when trying to quickly unde
    ```
    streamlit run app.py
    ```
-
-## Troubleshooting
-
-### Transformers Library Issues
-
-If you encounter import errors with the transformers library, such as:
-```
-ImportError: cannot import name 'AutoTokenizer' from 'transformers'
-```
-
-You can fix this by running the provided script:
-```
-python fix_transformers.py
-```
-
-This script will:
-1. Uninstall the current transformers library
-2. Clean the pip cache
-3. Install a specific version of transformers that is known to work
-4. Install additional dependencies
-
-Alternatively, you can manually reinstall the transformers library:
-```
-pip uninstall -y transformers
-pip install --no-cache-dir transformers>=4.30.0,<4.40.0
-```
-
-### Memory Issues
-
-If you encounter memory issues when loading the model, try:
-1. Closing other applications to free up memory
-2. Using a smaller model by modifying the `model_id` in `app.py`
-3. Adjusting the model loading parameters in `app.py` to reduce memory usage
