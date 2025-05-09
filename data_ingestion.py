@@ -12,16 +12,27 @@ def load_pdf(file_path):
     documents = loader.load()
     return documents
 
-def split_documents(documents, chunk_size=1500, chunk_overlap=150):
-    # Using larger chunk size and overlap for research papers to maintain context of complex academic content
+def split_documents(documents, chunk_size=1500, chunk_overlap=200):
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
         length_function=len,
-        separators=["\n\n", "\n", ".", " ", ""]
+        separators=["\n## ", "\n\n", "\n", ". ", " ", ""]
     )
+
+    for doc in documents:
+        if 'page' not in doc.metadata:
+            if hasattr(doc, 'metadata') and 'source' in doc.metadata:
+                source = doc.metadata['source']
+                if isinstance(source, str) and '-page-' in source:
+                    try:
+                        page_num = int(source.split('-page-')[1].split('.')[0])
+                        doc.metadata['page'] = page_num
+                    except (IndexError, ValueError):
+                        pass
     texts = text_splitter.split_documents(documents)
     print(f"Split {len(documents)} documents into {len(texts)} chunks")
+
     return texts
 
 def create_vector_store(texts):

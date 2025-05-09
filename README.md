@@ -71,12 +71,51 @@ Researchers and students face significant challenges when trying to quickly unde
    cd hybrid-search-cache-rag-app
    ```
 
-2. Install the required packages:
+2. Create and activate a virtual environment (recommended):
+   ```
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. Install the required packages:
    ```
    pip install -r requirements.txt
    ```
 
-3. Run the Streamlit app:
+4. Run the Streamlit app:
    ```
    streamlit run app.py
    ```
+
+## Troubleshooting
+
+### Transformers Library Issues
+
+If you encounter import errors with the transformers library, such as:
+```
+ImportError: cannot import name 'AutoTokenizer' from 'transformers'
+```
+
+You can fix this by running the provided script:
+```
+python fix_transformers.py
+```
+
+This script will:
+1. Uninstall the current transformers library
+2. Clean the pip cache
+3. Install a specific version of transformers that is known to work
+4. Install additional dependencies
+
+Alternatively, you can manually reinstall the transformers library:
+```
+pip uninstall -y transformers
+pip install --no-cache-dir transformers>=4.30.0,<4.40.0
+```
+
+### Memory Issues
+
+If you encounter memory issues when loading the model, try:
+1. Closing other applications to free up memory
+2. Using a smaller model by modifying the `model_id` in `app.py`
+3. Adjusting the model loading parameters in `app.py` to reduce memory usage

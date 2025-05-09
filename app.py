@@ -56,47 +56,28 @@ with col1:
 @st.cache_resource(show_spinner=False)
 def initialize_models():
     model_id = "pratham0011/mistral_7b-instruct-research-paper"
-
-    # Load tokenizer with optimized settings
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_id,
-        local_files_only=False,  # Allow downloading if not cached
-        use_fast=True           # Use faster tokenizer implementation
-    )
-
-    # Load model with enhanced memory optimizations
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
     model = AutoModelForCausalLM.from_pretrained(
         model_id,
-        torch_dtype=torch.float16,  # Use half precision
-        low_cpu_mem_usage=True,     # Optimize memory usage
-        offload_folder="offload",   # Offload to disk if needed
-        device_map="auto",          # Let the library decide the best device mapping
-        offload_state_dict=True,    # Offload state dict to CPU to save GPU memory
-        use_cache=True              # Enable KV cache for faster inference
+        torch_dtype=torch.float16,
+        low_cpu_mem_usage=True,
+        offload_folder="offload",
+        device_map="auto"
     )
 
-    # Create a text generation pipeline with optimized settings
     llm_pipeline = pipeline(
-        "text-generation",
-        model=model,
+        "text-generation", 
+        model=model, 
         tokenizer=tokenizer,
-        max_new_tokens=512,
+        max_new_tokens=1000, 
         do_sample=True,
-        temperature=0.7,
-        batch_size=1,               # Process one input at a time to reduce memory usage
-        return_full_text=False      # Only return the generated text, not the prompt
+        temperature=0.7
     )
 
-    # Create a wrapper function with optimized handling
     def mistral_llm(prompt):
         try:
-            # Use a timeout to prevent hanging
             output = llm_pipeline(prompt)
-
-            # Since we set return_full_text=False, we should get only the generated text
             generated_text = output[0]["generated_text"]
-
-            # Clean up any remaining prompt text if needed
             if prompt in generated_text:
                 response = generated_text[len(prompt):].strip()
             else:
@@ -104,7 +85,6 @@ def initialize_models():
 
             return response
         except Exception as e:
-            # Provide a fallback response if model generation fails
             st.error(f"Model generation error: {str(e)}")
             return f"I apologize, but I encountered an error while processing your request. Error details: {str(e)}"
 
@@ -114,40 +94,31 @@ def initialize_models():
 
     return mistral_llm, embeddings
 
-# Add a model loading state to prevent reloading
 if 'model_loaded' not in st.session_state:
     st.session_state.model_loaded = False
 
-# Only load the model if it hasn't been loaded yet
 if not st.session_state.model_loaded:
     with st.spinner("Loading Mistral 7B model... This may take a few minutes on first run."):
         progress_placeholder = st.empty()
         progress_bar = progress_placeholder.progress(0)
 
-        # Display staged loading messages for better user experience
         loading_message = st.empty()
         loading_message.info("Stage 1/3: Initializing model components...")
         progress_bar.progress(10)
 
-        # Pre-download the model to disk cache if needed
         loading_message.info("Stage 2/3: Loading model into memory (this may take a while)...")
         progress_bar.progress(30)
 
-        # Load models
         llm, embeddings = initialize_models()
 
-        # Update progress and message
         loading_message.info("Stage 3/3: Finalizing model setup...")
         progress_bar.progress(90)
 
-        # Mark as loaded in session state
         st.session_state.model_loaded = True
 
-        # Final update
         progress_bar.progress(100)
         loading_message.success("✅ Model loaded successfully! Ready to analyze research papers.")
 else:
-    # If already loaded, just get the cached models
     llm, embeddings = initialize_models()
 
 st.markdown("### Upload a research paper to analyze and ask questions about its content.")
@@ -172,7 +143,6 @@ if pdf_file is not None:
         try:
             retriever, tmp_file_path = process_uploaded_file(pdf_file)
             st.success("Research paper processed and ready for analysis!")
-            # Reset the session state for a new paper
             st.session_state.answer_displayed = False
             st.session_state.last_question = ""
         except Exception as e:
@@ -191,16 +161,13 @@ if retriever is not None:
         question = st.text_input("Ask a question about the research paper (e.g., 'What methodology was used?', 'What are the key findings?', 'What limitations were discussed?'):")
 
     with button_col:
-        # Only show the button if we're not already processing a question
         ask_button = st.button("Ask", key="ask_button", use_container_width=True, disabled=st.session_state.get('processing', False))
 
     if 'response_cache' not in st.session_state:
         st.session_state.response_cache = {}
 
-    # Process the question when the Ask button is clicked or when a question is entered
     if (question and ask_button) or (question and not st.session_state.answer_displayed):
         try:
-            # Set processing flag to disable the button during processing
             st.session_state.processing = True
             progress_bar = st.progress(0)
             status_text = st.empty()
@@ -213,31 +180,24 @@ if retriever is not None:
             status_text.text("Retrieving relevant documents...")
             progress_bar.progress(10)
 
-            # Get documents from retriever directly for faster processing
             docs = retriever.get_relevant_documents(question)
             phase1_end = time.time()
             phase1_time = phase1_end - phase1_start
             progress_bar.progress(40)
 
-            # Update time display
             time_display.text(f"⏱️ Retrieval time: {phase1_time:.2f} seconds")
 
             # Phase 2: Generating answer
             phase2_start = time.time()
             status_text.text("Generating answer...")
-
-            # Check if we have a cached response
             cache_key = question.strip().lower()
 
             if cache_key in st.session_state.response_cache:
-                # Use cached response
                 result = st.session_state.response_cache[cache_key]
                 answer = result['answer']
                 docs = result['source_documents']
             else:
                 context = "\n\n".join([doc.page_content for doc in docs[:4]])
-
-                # Research paper specific prompt
                 prompt = f"""You are a research assistant analyzing academic papers. Use the following excerpts from a research paper to answer the question.
 
 Paper excerpts:
@@ -257,10 +217,7 @@ Format your answer in a clear, academic style with proper citations to sections 
 
 Answer:"""
 
-                # Generate answer using our Mistral model
                 answer = llm(prompt)
-
-                # Cache the response
                 st.session_state.response_cache[cache_key] = {
                     'answer': answer,
                     'source_documents': docs
@@ -269,24 +226,17 @@ Answer:"""
             phase2_end = time.time()
             phase2_time = phase2_end - phase2_start
 
-            # Calculate total time
             total_time = time.time() - start_time
 
             progress_bar.progress(100)
             status_text.text("Done!")
-
-            # Update time display with detailed breakdown
             time_display.text(f"⏱️ Total time: {total_time:.2f} seconds | Retrieval: {phase1_time:.2f}s | Generation: {phase2_time:.2f}s")
-
-            # Display the answer in a more academic format
             st.write("### Research Analysis:")
             st.markdown(answer)
 
-            # Add citation information
             st.write("### Source Information:")
             st.info("The analysis above is based on the uploaded research paper and the specific sections referenced in the 'Paper Excerpts' below.")
 
-            # Display the source documents with better formatting
             with st.expander("View Paper Excerpts"):
                 for i, doc in enumerate(docs[:4]):
                     # Extract page number if available in metadata
@@ -299,13 +249,10 @@ Answer:"""
                     st.markdown("```")
                     st.markdown("---")
 
-            # Set the answer displayed flag and store the last question
             st.session_state.answer_displayed = True
             st.session_state.last_question = question
-            # Reset processing flag
             st.session_state.processing = False
         except Exception as e:
-            # Reset processing flag on error
             st.session_state.processing = False
             st.error(f"An error occurred: {str(e)}")
 
