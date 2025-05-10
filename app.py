@@ -69,7 +69,7 @@ def initialize_models():
         "text-generation", 
         model=model, 
         tokenizer=tokenizer,
-        max_new_tokens=1000, 
+        max_new_tokens=512, 
         do_sample=True,
         temperature=0.7
     )
